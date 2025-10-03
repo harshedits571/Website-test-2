@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harsh Edits - Galaxy Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --glow-color: #6d28d9;
+        }
+        body {
+            background-color: #000000;
+            color: #e5e7eb;
+            font-family: 'Roboto', sans-serif;
+            overflow: hidden;
+        }
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+        
+        /* --- Landing Page --- */
+        #landing-page {
+            background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+            z-index: 100;
+        }
+        .enter-btn {
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.4) 0%, rgba(139, 92, 246, 0) 70%);
+            border: 2px solid rgba(167, 139, 250, 0.5);
+            box-shadow: 0 0 20px rgba(109, 40, 217, 0.5), inset 0 0 10px rgba(109, 40, 217, 0.3);
+            transition: all 0.3s ease;
+        }
+        .enter-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 35px rgba(109, 40, 217, 0.8), inset 0 0 15px rgba(109, 40, 217, 0.5);
+            border-color: rgba(167, 139, 250, 0.8);
+        }
+
+        /* --- Main App UI --- */
+        #app { z-index: 10; opacity: 0; transition: opacity 0.5s ease; pointer-events: none; }
+        #app.visible { opacity: 1; pointer-events: auto; }
+
+        #main-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+        #galaxy-nav { z-index: 20; }
+        .nav-btn {
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            transition: all 0.3s ease;
+        }
+        .nav-btn:hover, .nav-btn.active {
+            background: rgba(56, 189, 248, 0.2);
+            border-color: rgba(56, 189, 248, 0.7);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+            color: #fff;
+        }
+
+        /* --- Details View --- */
+        #details-view {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 5, 20, 0.7);
+            backdrop-filter: blur(20px);
+            z-index: 30;
+            opacity: 0;
+            transition: opacity 0.5s ease 0.5s; /* Delay enter animation */
+            pointer-events: none;
+        }
+        #details-view.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #details-content::-webkit-scrollbar { width: 6px; }
+        #details-content::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        #details-content::-webkit-scrollbar-thumb { background: linear-gradient(to bottom, #6d28d9, #be185d); border-radius: 10px; }
+        #details-content::-webkit-scrollbar-thumb:hover { background: linear-gradient(to bottom, #8b5cf6, #db2777); }
+
+        .gradient-btn {
+            position: relative;
+            overflow: hidden;
+            background-image: linear-gradient(to right, #6d28d9, #9333ea, #be185d);
+            background-size: 200% auto;
+            transition: all 0.4s ease-in-out;
+            box-shadow: 0 4px 15px 0 rgba(196, 125, 243, 0.4);
+        }
+        .gradient-btn:hover {
+            background-position: right center;
+            transform: scale(1.05);
+            box-shadow: 0 8px 30px 0 rgba(196, 125, 243, 0.7);
+        }
+
+        /* --- Transition Overlay --- */
+        #transition-overlay {
+            z-index: 99;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        #transition-overlay.active {
+            pointer-events: all;
+            opacity: 1;
+        }
+        #transition-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Landing Page -->
+    <div id="landing-page" class="fixed inset-0 flex flex-col justify-center items-center text-center p-4">
+        <h1 class="font-orbitron text-5xl md:text-7xl font-black text-white tracking-wider mb-4">
+            HARSH EDITS
+        </h1>
+        <h2 class="text-2xl md:text-4xl font-bold gradient-text bg-gradient-to-r from-violet-400 to-sky-400 text-transparent bg-clip-text mb-12">
+            GALAXY HUB
+        </h2>
+        <button id="enter-btn" class="enter-btn font-orbitron text-white text-xl font-bold py-4 px-8 rounded-full">
+            ENTER THE UNIVERSE
+        </button>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app" class="fixed inset-0">
+        <canvas id="main-canvas"></canvas>
+
+        <nav id="galaxy-nav" class="fixed top-4 left-1/2 -translate-x-1/2 container max-w-lg mx-auto px-2 py-2 rounded-full">
+            <div class="flex justify-center items-center space-x-1 md:space-x-2">
+                 <button data-galaxy="software" class="nav-btn active text-gray-300 font-semibold py-2 px-3 md:px-5 rounded-full text-sm md:text-base">Software</button>
+                <button data-galaxy="plugins" class="nav-btn text-gray-300 font-semibold py-2 px-3 md:px-5 rounded-full text-sm md:text-base">Plugins</button>
+                <button data-galaxy="scripts" class="nav-btn text-gray-300 font-semibold py-2 px-3 md:px-5 rounded-full text-sm md:text-base">Scripts</button>
+                <button data-galaxy="assets" class="nav-btn text-gray-300 font-semibold py-2 px-3 md:px-5 rounded-full text-sm md:text-base">Assets</button>
+            </div>
+        </nav>
+
+        <!-- Details View (Replaces Modal) -->
+        <div id="details-view" class="p-8 flex flex-col">
+             <button id="details-back-btn" class="gradient-btn text-white font-semibold py-2 px-5 rounded-full shadow-lg mb-8 inline-flex items-center space-x-2 self-start">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                <span>Go Back to Galaxy</span>
+            </button>
+            <div class="flex items-center space-x-6 mb-8">
+                <img id="details-logo" src="" alt="Logo" class="w-20 h-20 object-contain p-2 bg-white/10 rounded-full">
+                <h3 id="details-title" class="font-orbitron text-4xl font-bold text-white tracking-tight"></h3>
+            </div>
+            <div id="details-content" class="flex-grow overflow-y-auto pr-2">
+                 <p id="details-description" class="text-gray-300 text-lg mb-6 max-w-3xl"></p>
+                <h4 class="text-2xl font-bold text-white tracking-tight mb-4 border-l-4 border-violet-500 pl-4">Available Versions</h4>
+                <div id="details-versions-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <!-- Version cards will be injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Galaxy Transition Overlay -->
+    <div id="transition-overlay" class="fixed inset-0 bg-black">
+        <canvas id="transition-canvas"></canvas>
+    </div>
+
+    <!-- Scripts -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- DATA STORE ---
+        const galaxyData = {
+            software: {
+                sun: { texture: 'assets/creative-cloud.png', size: 3, emissive: 0xffffff },
+                planets: [
+                    { name: 'After Effects', logo: 'https://upload.wikimedia.org/wikipedia/commons/c/cb/Adobe_After_Effects_CC_icon.svg', radius: 0.8, orbit: 6, speed: 0.005, versions: [{ year: '2020', desc: 'Stable Release', url: 'https://drive.google.com/file/d/1bKed59m-y5ZZI6-4IlEgJBzdGN1C5Rxj/view?usp=sharing' }, { year: '2021', desc: 'Stable Release', url: 'https://drive.google.com/file/d/1ZHq06y_CFQtLDTch9GpHt5IwEnWCtGDC/view?usp=sharing' }, { year: '2022', desc: 'Stable Release', url: 'https://drive.google.com/file/d/1YRtN-isE8B2c-f2QAW3UniccgLNOSg0n/view?usp=sharing' }, { year: '2023', desc: 'Stable Release', url: 'https://drive.google.com/file/d/1g_T3o5tcNprBua8jSWqcRe9egwlmCmFU/view?usp=sharing' }, { year: '2024', desc: 'Stable Release', url: 'https://drive.google.com/file/d/11hAL0WdA77ewKd4iJeGDi1AzViUTtlEM/view?usp=sharing' }, { year: '2025', desc: 'Latest Version', url: 'https://drive.google.com/file/d/1QF0AHW52ZDpfHqLLIZ4hUSqHHy0Q30ZQ/view?usp=sharing' }] },
+                    { name: 'Premiere Pro', logo: 'https://upload.wikimedia.org/wikipedia/commons/4/40/Adobe_Premiere_Pro_CC_icon.svg', radius: 0.7, orbit: 9, speed: 0.004, versions: [{ year: '2020', desc: 'Stable Version', url: 'https://drive.google.com/file/d/1xOUNF2XW4YvhmB6qUsW-Yt-_N_kESc5i/view?usp=sharing' }, { year: '2021', desc: 'Stable Release', url: 'https://drive.google.com/file/d/1F_mHHuBdUMcHyWxB03hECKKhCG2sQYYL/view?usp=sharing' }, { year: '2022', desc: 'Stable Version', url: 'https://drive.google.com/file/d/1O3acpw62IVR5oFeMKezpMwjw7rhYv2i-/view?usp=sharing' }, { year: '2023', desc: 'Stable Version', url: 'https://drive.google.com/file/d/1slPjxo2WmqvJNWMiAi-s70sQABO3AHMN/view?usp=sharing' }, { year: '2024', desc: 'Stable Version', url: 'https://drive.google.com/file/d/1dYcPG8pQHgweVzqbsHWFUeDM51XOhoj-/view?usp=sharing' }, { year: '2025', desc: 'Latest Version', url: 'https://drive.google.com/file/d/1s2IqZevh2S6oJrVbG3IlZxdUSdfLqT5M/view?usp=sharing' }] },
+                    { name: 'Photoshop', logo: 'https://upload.wikimedia.org/wikipedia/commons/a/af/Adobe_Photoshop_CC_icon.svg', radius: 0.75, orbit: 12, speed: 0.003, versions: [{ year: '2020', desc: 'Stable Version', url: 'https://drive.google.com/file/d/1kT8JgYqpvnj30snAiKGjIoXcFgh6nwva/view?usp=sharing' }, { year: '2021', desc: 'Stable Release', url: 'https://drive.google.com/file/d/1kkMbEimMxdIEKVnSR3V_WQLUhyQLA066/view?usp=drive_link' }, { year: '2022', desc: 'Stable Release', url: 'https://drive.google.com/file/d/1kprHBrLUpotVzn1G1spFc0hpoIxFVorM/view?usp=drive_link' }, { year: '2023', desc: 'Stable Release', url: 'https://drive.google.com/file/d/1kuKfs6dEMMKbTDIq93kIZdYDkB1zFtlh/view?usp=drive_link' }, { year: '2024', desc: 'Stable Release', url: 'https://drive.google.com/file/d/1SEoO-lnrGPP-K7goG75gsZlHiK1wBmf9/view?usp=sharing' }, { year: '2025', desc: 'Latest Release', url: 'https://drive.google.com/file/d/1klaoh8IR0YvGJlaxqsbattIaG85Ep0Pw/view?usp=drive_link' }] },
+                    { name: 'Illustrator', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fb/Adobe_Illustrator_CC_icon.svg', radius: 0.6, orbit: 15, speed: 0.0025, versions: [{ year: '2020', desc: 'Stable Version', url: 'https://drive.google.com/file/d/1lBrgwAWTQaaCQodJR7rtCpbEumI0wwQb/view?usp=drive_link' }, { year: '2021', desc: 'Stable Release', url: 'https://drive.google.com/file/d/1lAtoWxBQm7SdiZULyAD2YzeoAs00kY8-/view?usp=drive_link' }, { year: '2022', desc: 'Stable Release', url: 'https://drive.google.com/file/d/1kx9dU7yV1IpdWlTypA2FZbPjNwKuP7Od/view?usp=drive_link' }, { year: '2023', desc: 'Stable Release', url: 'https://drive.google.com/file/d/1l8qS2J0lGnZ0bd5HnW4n3iTrpHfuW3sk/view?usp=drive_link' }, { year: '2024', desc: 'Stable Release', url: '#' }, { year: '2025', desc: 'Latest Release', url: 'https://drive.google.com/file/d/1ZNajSGAaCaKtcQwESEEKcvA6xTjaXuWm/view?usp=drive_link' }] },
+                    { name: 'Media Encoder', logo: 'https://www.adobe.com/content/dam/acom/one-console/icons_rebrand/me_appicon.svg', radius: 0.5, orbit: 17, speed: 0.002, versions: [{ year: '2020', desc: 'Stable Version', url: 'https://drive.google.com/file/d/1o53VIZQsswD0de3FusXHlVJ8qwPM7dVZ/view?usp=sharing' }, { year: '2021', desc: 'Stable Release', url: 'https://drive.google.com/file/d/1Fv3-fK_3vJje6feWKq2dUjZbzE4ofxEV/view?usp=sharing' }, { year: '2022', desc: 'Stable Release', url: 'https://drive.google.com/file/d/1rAbr8DRL5W3wFzyRnVohVwByOIw4agxm/view?usp=sharing' }, { year: '2023', desc: 'Stable Release', url: 'https://drive.google.com/file/d/1Az9LBu1pBPaJ5xZoS39wsMfRaNnAz2pZ/view?usp=sharing' }, { year: '2024', desc: 'Stable Release', url: 'https://drive.google.com/file/d/1zHoJ6smv4H_OE2O2P39s1wj7LhIX3OTZ/view?usp=sharing' }, { year: '2025', desc: 'Latest Release', url: 'https://drive.google.com/file/d/1plG-0BWg4zZNYJkyDd2tHakYIXO1vzVx/view?usp=sharing' }] },
+                ]
+            },
+            plugins: {
+                sun: { texture: 'assets/plugins-sun.png', size: 2.5, emissive: 0x8b5cf6 },
+                planets: [
+                    { name: 'Sapphire Suite', logo: 'assets/sap.png', radius: 0.6, orbit: 5, speed: 0.006, description: 'Industry-standard VFX plugins.', versions: [{ name: 'Sapphire 2024.5', url: '#' }] },
+                    { name: 'BCC Suite', logo: 'assets/cc.png', radius: 0.6, orbit: 7, speed: 0.0055, description: 'Comprehensive visual effects.', versions: [{ name: 'Continuum 2022', url: 'https://drive.google.com/file/d/1k287dnhedu9NDOFJy852Why7YxU-2gQO/view?usp=sharing' }] },
+                    { name: 'Magic Bullet Suite', logo: 'assets/mb.png', radius: 0.6, orbit: 9, speed: 0.005, description: 'Professional color correction tools.', versions: [{ name: 'Magic Bullet 2024', url: 'https://drive.google.com/file/d/1-9qeNipVsdnZ_oR7jQOmevMsArS6iAw1/view?usp=sharing' }] },
+                    { name: 'Element 3D', logo: 'assets/e3d.png', radius: 0.7, orbit: 11, speed: 0.0045, description: 'Advanced 3D render engine.', versions: [{ name: 'Element 3D v2.2', url: 'https://drive.google.com/file/d/1WzYQHhGlff3P0y9fAl07n1zh2-CRjEjG/view?usp=sharing' }] },
+                    { name: 'Trapcode Suite', logo: 'assets/rg-ts.png', radius: 0.7, orbit: 13, speed: 0.004, description: '3D motion graphics and VFX.', versions: [{ name: 'Trapcode 2023', url: 'https://drive.google.com/file/d/18mMCxWpuVlSREN4smoYtJcn_OVrZGObf/view?usp=sharing' }] },
+                    { name: 'Shooter Suite', logo: 'assets/rg-ss.png', radius: 0.6, orbit: 15, speed: 0.0038, description: 'Footage prep and delivery tools.', versions: [{ name: 'Shooter_Suite 13.1.14', url: 'https://drive.google.com/file/d/1npLp5qHObSe1_PfLMcJF_M3Ta1phMlIc/view?usp=sharing' }] },
+                    { name: 'VFX Suite', logo: 'assets/vs.png', radius: 0.6, orbit: 17, speed: 0.0036, description: 'Keying, tracking, and cleanup.', versions: [{ name: 'VFX Suite 2024', url: 'https://drive.google.com/file/d/1CZm5HASlt1L5pasFOzcN3o_6-b3hq4cz/view?usp=sharing' }] },
+                    { name: 'Saber', logo: 'assets/sab.png', radius: 0.5, orbit: 19, speed: 0.0034, description: 'High-energy beams and effects.', versions: [{ name: 'Saber 1.0.40', url: 'https://drive.google.com/file/d/1cGvMi3f2QOuoQGQnG85x4abfWwvjoUe4/view?usp=sharing' }] },
+                    { name: 'RSMB', logo: 'assets/rsmb.png', radius: 0.5, orbit: 21, speed: 0.0032, description: 'ReelSmart Motion Blur.', versions: [{ name: 'RSMB Pro', url: 'https://drive.google.com/file/d/1TU1buI7GXPi_i4jzm5FmyEK8nLlgSnXN/view?usp=sharing' }] },
+                    { name: 'FX Console', logo: 'assets/fxc.png', radius: 0.5, orbit: 23, speed: 0.0030, description: 'Workflow utility for effects.', versions: [{ name: 'Enter Version Name', url: '#' }] },
+                    { name: 'Optical Flares', logo: 'assets/VC-ofpng.png', radius: 0.6, orbit: 25, speed: 0.0028, description: 'Realistic lens flare generator.', versions: [{ name: 'Optical Flares v1.3.8', url: 'https://drive.google.com/file/d/1fo9vT2qCfM0fcUioEfTrAD3ZXlCK6m-C/view?usp=sharing' }] },
+                    { name: 'Twixtor Pro', logo: 'assets/twxt.png', radius: 0.6, orbit: 27, speed: 0.0026, description: 'Intelligent slow-motion.', versions: [{ name: 'Twixtor Pro v7.3.0', url: 'https://drive.google.com/file/d/1pn1h9Mch_xLgFLfgKnh5VYVGa-HqY367/view?usp=drive_link' }] },
+                    { name: 'Red Giant Universe', logo: 'assets/rgu.png', radius: 0.7, orbit: 29, speed: 0.0024, description: 'Effects and transitions library.', versions: [{ name: 'RG Universe 2024', url: 'https://drive.google.com/file/d/1-EjzbWk-fwnhaGsaBd6LSDdquZI4GVQC/view?usp=sharing' }] },
+                    { name: 'Shadow Studio 3', logo: 'assets/ss3.png', radius: 0.5, orbit: 31, speed: 0.0022, description: 'Realistic shadow generator.', versions: [{ name: 'Shadow Studio 3 v1.0.5', url: 'https://drive.google.com/file/d/1QuRTtfrn0Q3wzB0fdN3G2BpAK1LZaDuw/view?usp=drive_link' }] },
+                    { name: 'Deep Glow', logo: 'assets/dg.jpg', radius: 0.5, orbit: 33, speed: 0.0020, description: 'Physically accurate glows.', versions: [{ name: 'DeepGlow 1.2', url: 'https://drive.google.com/drive/folders/1RuryQ6dG6b-M2C6hwlwkTEoEKXxcLsOd?usp=sharing' }] },
+                ]
+            },
+            scripts: {
+                sun: { texture: 'assets/scripts-sun.png', size: 2, emissive: 0x0ea5e9 },
+                planets: [
+                     { name: 'Motion Bro', logo: 'assets/motion_bro.png', radius: 0.5, orbit: 5, speed: 0.007, description: 'The most popular extension for presets.', versions: [{ name: 'For Ae 2020 Above', url: 'https://drive.google.com/file/d/1mZB3MrWiuGNeULbk2D0axaOUOj0R5N8v/view?usp=sharing' }, { name: 'For Ae 2021 Above', url: 'https://drive.google.com/file/d/1PI17qpqrlwJZrl8Jyj6R6Dl5MzG6_X9C/view?usp=sharing' }] },
+                     { name: 'Flow', logo: 'assets/flow.png', radius: 0.5, orbit: 7, speed: 0.006, description: 'Easy animation curve control.', versions: [{ name: 'v1.5.2', url: 'https://drive.google.com/file/d/134dY8lo2HOJzCe_UJgh16IvDXzcPDih_/view?usp=drive_link' }] },
+                     { name: 'AtomX', logo: 'assets/atom_x.jpg', radius: 0.5, orbit: 9, speed: 0.005, description: 'Extension for motion graphics packages.', versions: [{ name: 'v3.9.0', url: 'https://drive.google.com/file/d/198oG7orNkjGYuB34uHWKEzFkhwhZTJQl/view?usp=sharing' }] },
+                     { name: 'GEOlayers 3', logo: 'assets/geolayers3.jpg', radius: 0.6, orbit: 11, speed: 0.004, description: 'Map animation and data visualization.', versions: [{ name: 'Enter Version Name', url: '#' }] },
+                     { name: 'JerryFlow V2', logo: 'assets/JerryFlow_v2.png', radius: 0.6, orbit: 13, speed: 0.003, description: 'The ultimate extension for After Effects', versions: [{ name: 'JerryFlow V2.0.0', url: 'https://drive.google.com/file/d/1SawuVL0m85aSRbEAtuxiuzJw4MDewfpK/view?usp=sharing' }] },
+                     { name: 'Keystone', logo: 'assets/keystone.jpg', radius: 0.5, orbit: 15, speed: 0.002, description: 'Easy layer alignment & distribution.', versions: [{ name: 'v1.1.6', url: 'https://drive.google.com/drive/folders/1Ykjk5fe8Nxi-xBqqFUeM3WvllgDru37A?usp=sharing' }] }
+                ]
+            },
+            assets: {
+                sun: { texture: 'assets/assets-sun.png', size: 2, emissive: 0xdb2777 },
+                planets: [
+                    { name: 'Malice Ultimate Pack', logo: 'assets/malice-pack.png', radius: 0.5, orbit: 5, speed: 0.008, description: 'Light leaks, dust, and film grain.', versions: [{ name: 'Download Pack', url: 'https://drive.google.com/drive/folders/1vZ0D6keKnKOEr8vPcPXoZt9KsuVEKqmR' }] },
+                    { name: 'Sound FX Library', logo: 'assets/sfx-library.png', radius: 0.5, orbit: 7, speed: 0.007, description: 'Whooshes, impacts, and risers.', versions: [{ name: 'Download Library', url: 'https://drive.google.com/drive/folders/1q6BzFxLDKY8tt48SqLng0-lPFODNZKpA' }] },
+                    { name: 'Editing Assets', logo: 'assets/editing-assets.png', radius: 0.5, orbit: 9, speed: 0.006, description: 'Bundle of digital resources.', versions: [{ name: 'Download Bundle', url: 'https://drive.google.com/drive/folders/1jl0iH8E5w9d-jXYTw3uKhiAkVYdWZ2ia' }] },
+                    { name: 'LUTs Collection', logo: 'assets/luts-collection.png', radius: 0.5, orbit: 11, speed: 0.005, description: 'Cinematic color grading presets.', versions: [{ name: 'Download Collection', url: '#' }] }
+                ]
+            }
+        };
+
+        // --- DOM ELEMENTS ---
+        const landingPage = document.getElementById('landing-page');
+        const enterBtn = document.getElementById('enter-btn');
+        const appContainer = document.getElementById('app');
+        const mainCanvas = document.getElementById('main-canvas');
+        const galaxyNav = document.getElementById('galaxy-nav');
+        const detailsView = document.getElementById('details-view');
+        const detailsBackBtn = document.getElementById('details-back-btn');
+        const transitionOverlay = document.getElementById('transition-overlay');
+        const transitionCanvas = document.getElementById('transition-canvas');
+
+        // --- STATE MANAGEMENT ---
+        let currentView = 'landing'; // landing | galaxy | details | transition
+        let cameraAnimation = null;
+        let lastCameraState = { position: new THREE.Vector3(), quaternion: new THREE.Quaternion() };
+
+        // --- THREE.JS SETUP ---
+        let scene, camera, renderer, controls, raycaster, mouse;
+        let planets = [], orbits = [], currentSun;
+        const textureLoader = new THREE.TextureLoader();
+        
+        function initMainScene() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 25;
+
+            renderer = new THREE.WebGLRenderer({ canvas: mainCanvas, antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.minDistance = 5;
+            controls.maxDistance = 60;
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+            
+            const starGeometry = new THREE.BufferGeometry();
+            const starVertices = [];
+            for (let i = 0; i < 10000; i++) {
+                starVertices.push((Math.random() - 0.5) * 2000, (Math.random() - 0.5) * 2000, (Math.random() - 0.5) * 2000);
+            }
+            starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            const starMaterial = new THREE.PointsMaterial({ color: 0xffffff, size: 0.7 });
+            scene.add(new THREE.Points(starGeometry, starMaterial));
+        }
+
+        function createGalaxy(galaxyKey) {
+            planets.forEach(p => scene.remove(p.object));
+            orbits.forEach(o => scene.remove(o));
+            if(currentSun) scene.remove(currentSun.light, currentSun.mesh);
+            planets = [];
+            orbits = [];
+            
+            const data = galaxyData[galaxyKey];
+            if (!data) return;
+
+            const sunTexture = textureLoader.load(data.sun.texture);
+            const sunMaterial = new THREE.MeshBasicMaterial({ map: sunTexture, transparent: true });
+            const sunMesh = new THREE.Mesh(new THREE.SphereGeometry(data.sun.size, 32, 32), sunMaterial);
+            const sunLight = new THREE.PointLight(data.sun.emissive, 2, 100);
+            scene.add(sunMesh, sunLight);
+            currentSun = { light: sunLight, mesh: sunMesh };
+
+            data.planets.forEach(planetData => {
+                const planetGroup = new THREE.Object3D(); 
+                scene.add(planetGroup);
+                
+                const texture = textureLoader.load(planetData.logo);
+                const material = new THREE.MeshStandardMaterial({ map: texture, metalness: 0.2, roughness: 0.8 });
+                const planetMesh = new THREE.Mesh(new THREE.SphereGeometry(planetData.radius, 32, 32), material);
+                
+                planetMesh.position.x = planetData.orbit;
+                planetMesh.userData = planetData; 
+                
+                planetGroup.add(planetMesh);
+                planets.push({ object: planetGroup, mesh: planetMesh, speed: planetData.speed, selfSpeed: Math.random() * 0.01 + 0.005 });
+
+                const orbitGeometry = new THREE.RingGeometry(planetData.orbit - 0.05, planetData.orbit + 0.05, 128);
+                const orbitMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.1 });
+                const orbitMesh = new THREE.Mesh(orbitGeometry, orbitMaterial);
+                orbitMesh.rotation.x = Math.PI / 2;
+                orbits.push(orbitMesh);
+                scene.add(orbitMesh);
+            });
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            if (cameraAnimation) {
+                cameraAnimation.update();
+            } else {
+                 controls.update();
+            }
+
+            if (currentView === 'galaxy' || currentView === 'details') {
+                planets.forEach(p => {
+                    p.object.rotation.y += p.speed;
+                    p.mesh.rotation.y += p.selfSpeed;
+                });
+            }
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // --- DETAILS VIEW LOGIC ---
+        function flyToPlanet(planetMesh) {
+            currentView = 'transition';
+            controls.enabled = false;
+            lastCameraState.position.copy(camera.position);
+            lastCameraState.quaternion.copy(camera.quaternion);
+
+            const targetPosition = new THREE.Vector3();
+            planetMesh.getWorldPosition(targetPosition);
+            
+            const offset = new THREE.Vector3(0, 0, planetMesh.geometry.parameters.radius * 4);
+            const targetQuaternion = new THREE.Quaternion();
+            const endPosition = targetPosition.clone().add(offset);
+            
+            cameraAnimation = createCameraAnimation(endPosition, targetQuaternion, 1.5, () => {
+                cameraAnimation = null;
+                appContainer.classList.remove('visible');
+                detailsView.classList.add('visible');
+                currentView = 'details';
+            });
+
+            appContainer.classList.remove('visible'); // Start fade out
+            populateDetailsView(planetMesh.userData);
+        }
+
+        function flyBack() {
+             currentView = 'transition';
+             detailsView.classList.remove('visible');
+
+             cameraAnimation = createCameraAnimation(lastCameraState.position, lastCameraState.quaternion, 1.5, () => {
+                cameraAnimation = null;
+                controls.enabled = true;
+                currentView = 'galaxy';
+            });
+            
+             appContainer.classList.add('visible'); // Start fade in
+        }
+
+        function createCameraAnimation(targetPos, targetQuat, duration, onComplete) {
+            const startPos = camera.position.clone();
+            const startQuat = camera.quaternion.clone();
+            let elapsed = 0;
+
+            return {
+                update: () => {
+                    elapsed += 1/60;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const easedProgress = 0.5 - 0.5 * Math.cos(progress * Math.PI);
+
+                    camera.position.lerpVectors(startPos, targetPos, easedProgress);
+                    camera.quaternion.slerpQuaternions(startQuat, targetQuat, easedProgress);
+                    
+                    if (progress >= 1) {
+                        onComplete();
+                    }
+                }
+            };
+        }
+        
+        function populateDetailsView(data) {
+            document.getElementById('details-logo').src = data.logo;
+            document.getElementById('details-title').textContent = data.name;
+            document.getElementById('details-description').textContent = data.description || '';
+            const grid = document.getElementById('details-versions-grid');
+            grid.innerHTML = '';
+            
+            data.versions.forEach(version => {
+                const card = `
+                    <div class="bg-gray-900/50 rounded-lg p-4 text-center flex flex-col justify-between">
+                        <h5 class="font-bold text-white mb-1">${version.name || data.name + ' ' + version.year}</h5>
+                        ${version.desc ? `<p class="text-sm text-gray-400 mb-4">${version.desc}</p>`: ''}
+                        <a href="${version.url}" target="_blank" class="mt-auto block w-full gradient-btn text-white font-semibold py-2 px-4 rounded-full text-sm">Download</a>
+                    </div>
+                `;
+                grid.insertAdjacentHTML('beforeend', card);
+            });
+        }
+
+        function onCanvasClick(event) {
+            if (currentView !== 'galaxy') return;
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            const planetMeshes = planets.map(p => p.mesh);
+            const intersects = raycaster.intersectObjects(planetMeshes);
+
+            if (intersects.length > 0) {
+                flyToPlanet(intersects[0].object);
+            }
+        }
+        
+        // --- GALAXY TRANSITION ---
+        let transitionScene, transitionCamera, transitionRenderer, transitionStars;
+        
+        function initTransitionScene() {
+            transitionScene = new THREE.Scene();
+            transitionCamera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+            transitionCamera.position.z = 1;
+            
+            transitionRenderer = new THREE.WebGLRenderer({ canvas: transitionCanvas, antialias: true });
+            transitionRenderer.setSize(window.innerWidth, window.innerHeight);
+
+            const starGeo = new THREE.BufferGeometry();
+            const starVertices = [];
+            for (let i = 0; i < 6000; i++) {
+                starVertices.push(Math.random() * 600 - 300, Math.random() * 600 - 300, Math.random() * 600 - 300);
+            }
+            starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            
+            let sprite = new THREE.TextureLoader().load('https://threejs.org/examples/textures/sprites/disc.png');
+            let starMaterial = new THREE.PointsMaterial({ color: 0xaaaaaa, size: 0.7, map: sprite });
+
+            transitionStars = new THREE.Points(starGeo, starMaterial);
+            transitionScene.add(transitionStars);
+        }
+
+        function animateTransition() {
+            if (currentView !== 'transition-galaxy') return;
+            
+            transitionStars.geometry.attributes.position.array.forEach((_, i) => {
+                if(i % 3 === 2) { 
+                    transitionStars.geometry.attributes.position.array[i] -= 4;
+                    if (transitionStars.geometry.attributes.position.array[i] < -200) {
+                        transitionStars.geometry.attributes.position.array[i] = 400;
+                    }
+                }
+            });
+            transitionStars.geometry.attributes.position.needsUpdate = true;
+            transitionRenderer.render(transitionScene, transitionCamera);
+            requestAnimationFrame(animateTransition);
+        }
+
+        async function transitionToGalaxy(galaxyKey) {
+            currentView = 'transition-galaxy';
+            transitionOverlay.classList.add('active');
+            requestAnimationFrame(animateTransition);
+            
+            await new Promise(resolve => setTimeout(resolve, 4000));
+            
+            createGalaxy(galaxyKey);
+            
+            transitionOverlay.classList.remove('active');
+            currentView = 'galaxy';
+        }
+
+        // --- EVENT LISTENERS ---
+        enterBtn.addEventListener('click', () => {
+            landingPage.style.transition = 'opacity 0.5s ease';
+            landingPage.style.opacity = '0';
+            setTimeout(() => {
+                landingPage.style.display = 'none';
+                appContainer.classList.add('visible');
+                currentView = 'galaxy';
+                
+                initMainScene();
+                initTransitionScene();
+                createGalaxy('software');
+                animate();
+            }, 500);
+        });
+        
+        galaxyNav.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON' && currentView === 'galaxy') {
+                const galaxyKey = e.target.dataset.galaxy;
+                if (!e.target.classList.contains('active')) {
+                    document.querySelector('.nav-btn.active').classList.remove('active');
+                    e.target.classList.add('active');
+                    transitionToGalaxy(galaxyKey);
+                }
+            }
+        });
+
+        window.addEventListener('resize', onWindowResize);
+        mainCanvas.addEventListener('click', onCanvasClick);
+        detailsBackBtn.addEventListener('click', flyBack);
+    </script>
+</body>
+</html>
+
+
